@@ -108,14 +108,14 @@ public class MainMenu : MonoBehaviour
     {
         PlayerPrefs.SetFloat("MusicVolume", vol);
         PlayerPrefs.Save();
-        // AudioManager.Instance?.SetMusicVolume(vol);
+        AudioManager.Instance?.SetMusicVolume(vol);
     }
 
     private void SetSfxVolume(float vol)
     {
         PlayerPrefs.SetFloat("SFXVolume", vol);
         PlayerPrefs.Save();
-        // AudioManager.Instance?.SetSfxVolume(vol);
+        AudioManager.Instance?.SetSfxVolume(vol);
     }
 
     public static void ReturnToMainMenu()
