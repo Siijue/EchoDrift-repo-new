@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using System.Linq;
 
 public class MapUI : MonoBehaviour, IDragHandler, IScrollHandler
 {
@@ -38,6 +39,11 @@ public class MapUI : MonoBehaviour, IDragHandler, IScrollHandler
         teleportButton?.onClick.AddListener(OnTeleportConfirmed);
     }
 
+    private void Start()
+    {
+        if (MapManager.Instance != null) MapManager.Instance.OnMapDataChanged.AddListener(OnMapDataChanged);
+    }
+
     public void OpenMap()
     {
         mapPanel.SetActive(true);
@@ -50,6 +56,16 @@ public class MapUI : MonoBehaviour, IDragHandler, IScrollHandler
         mapPanel.SetActive(false);
         if (teleportConfirmPanel != null) teleportConfirmPanel.SetActive(false);
         selectedCheckpointID = null;
+        if (PauseScreen.Instance != null) PauseScreen.Instance.IgnoreNextEscape();
+    }
+
+    private void OnMapDataChanged()
+    {
+        if (IsMapOpen)
+        {
+            RefreshCheckpointIcons();
+            RefreshZones();
+        }
     }
 
     private void Update()
@@ -61,6 +77,11 @@ public class MapUI : MonoBehaviour, IDragHandler, IScrollHandler
 
     private void RefreshZones()
     {
+        if (MapManager.Instance == null) return;
+
+        var discoveredZones = MapManager.Instance.GetDiscoveredZones();
+        if (discoveredZones == null) return;
+
         foreach(var zone in MapManager.Instance?.GetDiscoveredZones())
         {
             if (spawnedZoneObjects.ContainsKey(zone.zoneID)) continue;
@@ -79,8 +100,23 @@ public class MapUI : MonoBehaviour, IDragHandler, IScrollHandler
 
     private void RefreshCheckpointIcons()
     {
-        foreach (var obj in spawnedIcons) Destroy(obj);
+        foreach (var obj in spawnedIcons)
+        {
+            if(obj != null) Destroy(obj);
+        }
         spawnedIcons.Clear();
+
+        if (MapManager.Instance == null) return;
+        var activatedCheckpoints = MapManager.Instance.GetActivatedCheckpoints();
+        Debug.Log($"активных чекпоинов: {MapManager.Instance.GetActivatedCheckpointsIDs().Count()}");
+        foreach (var checkpoint in activatedCheckpoints)
+        {
+            if (checkpoint != null)
+            {
+                Debug.Log($"Активный чекпоинт: {checkpoint.CheckpointID} - {checkpoint.gameObject.name}");
+            }
+        }
+        if (activatedCheckpoints == null) return;
 
         foreach(var checkpoint in MapManager.Instance?.GetActivatedCheckpoints())
         {
@@ -137,5 +173,12 @@ public class MapUI : MonoBehaviour, IDragHandler, IScrollHandler
     {
         float clamped = Mathf.Clamp(scale.x, minZoom, maxZoom);
         return new Vector3(clamped, clamped, 1f);
+    }
+
+
+    private void OnDestroy()
+    {
+        if (MapManager.Instance != null) MapManager.Instance.OnMapDataChanged.RemoveListener(OnMapDataChanged);
+        teleportButton?.onClick.RemoveListener(OnTeleportConfirmed);
     }
 }

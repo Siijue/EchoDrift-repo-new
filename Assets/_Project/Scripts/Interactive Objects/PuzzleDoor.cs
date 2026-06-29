@@ -60,7 +60,10 @@ public class PuzzleDoor : MonoBehaviour
     {
         if (tracker != null)
         {
-            Invoke(nameof(SubscribeToTracker), 0.1f);
+            GameEventBus.Instance?.Subscribe($"ObjectActivated_{tracker.ObjectID}", OnRestoredFromSave);
+            GameEventBus.Instance?.Subscribe($"ObjectDeactivated_{tracker.ObjectID}", OnRestoredFromSave);
+
+            if (tracker.CurrentState && !isOpen) ApplyOpenState();
         }
     }
 
@@ -90,6 +93,22 @@ public class PuzzleDoor : MonoBehaviour
             MoveDirection.Custom => customDirection.normalized,
             _ => Vector2.up
         };
+    }
+
+    private void ApplyOpenState()
+    {
+        isOpen = true;
+        transform.position = targetPosition;
+        if (doorCollider != null) doorCollider.enabled = false;
+        UpdateVisuals();
+    }
+
+    private void ApplyCloseState()
+    {
+        isOpen = false;
+        transform.position = startPosition;
+        if (doorCollider != null) doorCollider.enabled = true;
+        UpdateVisuals();
     }
 
     private void OnEnable()
@@ -279,20 +298,10 @@ public class PuzzleDoor : MonoBehaviour
     private void OnRestoredFromSave(object sender)
     {
         if (tracker == null) return;
-        if (!isLoadingFromSave) return;
         if (tracker.CurrentState)
         {
-            transform.position = targetPosition;
-            isOpen = true;
-            if (doorCollider != null) doorCollider.enabled = false;
-            UpdateVisuals();
+            if (!isOpen) ApplyOpenState();
         }
-        else
-        {
-            transform.position = startPosition;
-            isOpen = false;
-            if (doorCollider != null) doorCollider.enabled = true;
-            UpdateVisuals();
-        }
+        else if (isOpen) ApplyCloseState();
     }
 }

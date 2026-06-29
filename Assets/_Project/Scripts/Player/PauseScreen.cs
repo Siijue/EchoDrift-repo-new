@@ -143,7 +143,9 @@ public class PauseScreen : MonoBehaviour
         Time.timeScale = 1f;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
-        SaveCurrentProgress();
+        if (GameManager.Instance != null) GameManager.Instance.SaveGame();
+        else SaveCurrentProgress();
+
         SceneManager.LoadScene(MainMenu.MENU_SCENE_NAME);
     }
 
@@ -165,9 +167,8 @@ public class PauseScreen : MonoBehaviour
         if (player == null) return;
         PlayerHealth health = player.GetComponent<PlayerHealth>();
         if (health == null) return;
-
         SaveData saveData = SaveSystem.Load();
-        if(saveData == null)
+        if (saveData == null)
         {
             saveData = new SaveData();
             saveData.hasStartedGame = true;
@@ -188,13 +189,36 @@ public class PauseScreen : MonoBehaviour
         if (EconomyManager.Instance != null) EconomyManager.Instance.SaveToSaveData(saveData);
 
         var mapManag = FindFirstObjectByType<MapManager>();
-        if(mapManag != null)
+        if (mapManag != null)
         {
-            saveData.activeCheckpoints = mapManag.GetActivatedCheckpoints().Where(ch => ch != null).Select(ch => ch.CheckpointID).ToList();
+            saveData.activeCheckpoints = mapManag.GetActivatedCheckpointsIDs().ToList();
             saveData.discoveredZones = mapManag.GetDiscoveredZones().Where(zn => zn != null).Select(zn => zn.zoneID).ToList();
+
+            foreach (var checkpointID in saveData.activeCheckpoints)
+            {
+                if (!saveData.checkpointPositions.ContainsKey(checkpointID))
+                {
+                    var checkpoint = FindCheckpointByID(checkpointID);
+                    if (checkpoint != null)
+                    {
+                        Vector3 pos = checkpoint.TeleportPoint != null ?
+                            checkpoint.TeleportPoint.position : checkpoint.transform.position;
+                        saveData.checkpointPositions[checkpointID] = pos;
+                    }
+                }
+            }
         }
 
         SaveSystem.Save(saveData);
+    }
+    private Checkpoint FindCheckpointByID(string checkpointID)
+    {
+        var allCheckpoints = FindObjectsByType<Checkpoint>(FindObjectsSortMode.None);
+        foreach (var cp in allCheckpoints)
+        {
+            if (cp != null && cp.CheckpointID == checkpointID) return cp;
+        }
+        return null;
     }
 
     private Transform GetLastCheckpoint()
@@ -202,11 +226,21 @@ public class PauseScreen : MonoBehaviour
         var mapManag = FindFirstObjectByType<MapManager>();
         if (mapManag == null) return null;
 
-        var checkpoints = mapManag.GetActivatedCheckpoints();
-        if (checkpoints == null || !checkpoints.Any()) return null;
+        string currentId = mapManag.CurrentCheckpointID;
 
-        var last = checkpoints.Last();
-        return last != null ? last.transform : null;
+        if (!string.IsNullOrEmpty(currentId))
+        {
+            var chPnt = FindCheckpointByID(currentId);
+            if (chPnt != null) return chPnt.TeleportPoint != null ? chPnt.TeleportPoint : chPnt.transform;
+        }
+
+        var chIDs = mapManag.GetActivatedCheckpointsIDs();
+        if (chIDs == null || !chIDs.Any()) return null;
+
+        string lastID = chIDs.Last();
+        var ch = FindCheckpointByID(lastID);
+        if (ch != null) return ch.TeleportPoint != null ? ch.TeleportPoint : ch.transform;
+        return null;
     }
 
     private void InitializeSettings()

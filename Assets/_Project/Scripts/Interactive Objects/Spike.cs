@@ -58,5 +58,21 @@ public class Spike : MonoBehaviour
             }
             return;
         }
+
+        if (affectsEnemies)
+        {
+            MoldAI mold = other.GetComponent<MoldAI>();
+            if (mold != null)
+            {
+                mold.TransitionTo(mold.GetShrinkDeadState());
+                Rigidbody2D rb = other.attachedRigidbody;
+                if (rb != null)
+                {
+                    Vector2 dir = (other.transform.position - transform.position).normalized;
+                    rb.AddForce(dir * knockbackForce, ForceMode2D.Impulse);
+                }
+                lastDamageTime = Time.time;
+            }
+        }
     }
 }
