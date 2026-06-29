@@ -30,13 +30,13 @@ public class ArenaBossActivator : MonoBehaviour, IInteractable
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player") && !_isBossAlive)
-            HintManager.Instance?.RegisterHint(this, hintText, 10f, hintDuration);
+            UIManager.Instance?.ShowHint(hintText);
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
-            HintManager.Instance?.RemoveHintsFromSource(this);
+            UIManager.Instance?.HideHint();
     }
 
     public void Interact(PlayerController player)

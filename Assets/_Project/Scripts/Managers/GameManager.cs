@@ -43,9 +43,6 @@ public class GameManager : MonoBehaviour
         currentSaveData = SaveSystem.Load();
         if (currentSaveData == null || !currentSaveData.hasStartedGame) return;
 
-        //delete
-        Debug.Log($"[GameManager] Загрузка сохранения: " + $"{currentSaveData.discoveredZones?.Count ?? 0} зон, " + $"{currentSaveData.activeCheckpoints?.Count ?? 0} чекпоинтов, " + $"{currentSaveData.killedEnemy?.Count ?? 0} убитых врагов, " + $"{currentSaveData.activatedObjects?.Count ?? 0} активированных объектов");
-
         PlayerController player = FindAnyObjectByType<PlayerController>();
         if (player != null)
         {
@@ -58,6 +55,7 @@ public class GameManager : MonoBehaviour
 
         if (MapManager.Instance != null)
         {
+            MapManager.Instance.RefreshCheckpointsList();
             MapManager.Instance.LoadFromSaveData(currentSaveData);
             RestoreCheckpointsVisuals();
         }
@@ -116,10 +114,29 @@ public class GameManager : MonoBehaviour
     {
         if (MapManager.Instance == null) return null;
 
-        var checkpoints = MapManager.Instance.GetActivatedCheckpoints();
-        if (checkpoints == null || !checkpoints.Any()) return null;
-        var last = checkpoints.Last();
+        string currentID = MapManager.Instance.CurrentCheckpointID;
+
+        if (!string.IsNullOrEmpty(currentID))
+        {
+            var checkpoint = FindCheckpointByID(currentID);
+            if (checkpoint != null) return checkpoint.TeleportPoint != null ? checkpoint.TeleportPoint : checkpoint.transform;
+        }
+
+        var checkpoitns = MapManager.Instance.GetActivatedCheckpoints();
+        if (checkpoitns == null || !checkpoitns.Any()) return null;
+
+        var last = checkpoitns.Last();
         return last != null ? last.transform : null;
+    }
+
+    private Checkpoint FindCheckpointByID(string chID)
+    {
+        var allCheckpoints = FindObjectsByType<Checkpoint>(FindObjectsSortMode.None);
+        foreach(var ch in allCheckpoints)
+        {
+            if (ch != null && ch.CheckpointID == chID) return ch;
+        }
+        return null;
     }
 
     public void OnCheckpointReached(string checkpointID) => SaveGame();

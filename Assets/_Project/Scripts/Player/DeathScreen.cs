@@ -159,21 +159,20 @@ public class DeathScreen : MonoBehaviour
         SaveData saveData = SaveSystem.Load();
         if (saveData == null) return null;
 
-        if(saveData.activeCheckpoints != null && saveData.activeCheckpoints.Count > 0)
+        if (saveData.activeCheckpoints != null && saveData.activeCheckpoints.Count > 0)
         {
             string lastCheckpointID = saveData.activeCheckpoints.Last();
-
-            if (saveData.checkpointPositions != null && saveData.checkpointPositions.TryGetValue(lastCheckpointID, out SerializableVector3 pos)) return pos;
-
-            var mapManag = FindFirstObjectByType<MapManager>();
-            if(mapManag != null)
+            if (saveData.checkpointPositions != null && saveData.checkpointPositions.TryGetValue(lastCheckpointID, out SerializableVector3 pos))
             {
-                var checkpoint = mapManag.GetActivatedCheckpoints().FirstOrDefault(ch => ch != null && ch.CheckpointID == lastCheckpointID);
-                if(checkpoint != null)
-                {
-                    Vector3 posCh = checkpoint.TeleportPoint != null ? checkpoint.TeleportPoint.position : checkpoint.transform.position;
-                    return posCh;
-                }
+                return pos;
+            }
+
+            var checkpoint = FindCheckpointByID(lastCheckpointID);
+            if (checkpoint != null)
+            {
+                Vector3 posCh = checkpoint.TeleportPoint != null ?
+                    checkpoint.TeleportPoint.position : checkpoint.transform.position;
+                return posCh;
             }
         }
 
@@ -183,66 +182,91 @@ public class DeathScreen : MonoBehaviour
 
     private Transform GetLastCheckpoint()
     {
-        var mapManager = FindFirstObjectByType<MapManager>();
-        if (mapManager != null)
-        {
-            var checkpoints = mapManager.GetActivatedCheckpoints();
+        var mapManag = FindFirstObjectByType<MapManager>();
+        if (mapManag == null) return null;
 
-            if (checkpoints != null && checkpoints.Any())
-            {
-                var lastCheckpoint = checkpoints.Last();
-                return lastCheckpoint.transform;
-            }
+        string currentId = mapManag.CurrentCheckpointID;
+
+        if (!string.IsNullOrEmpty(currentId))
+        {
+            var checkpoint = FindCheckpointByID(currentId);
+            if (checkpoint != null) return checkpoint.TeleportPoint != null ? checkpoint.TeleportPoint : checkpoint.transform;
         }
 
+        var chIDs = mapManag.GetActivatedCheckpointsIDs();
+        if (chIDs == null || !chIDs.Any()) return null;
+
+        string lastID = chIDs.Last();
+        var lastCh = FindCheckpointByID(lastID);
+        if (lastCh != null) return lastCh.TeleportPoint != null ? lastCh.TeleportPoint : lastCh.transform;
+        return null;
+    }
+
+    private Checkpoint FindCheckpointByID(string checkpointID)
+    {
+        var allCheckpoints = FindObjectsByType<Checkpoint>(FindObjectsSortMode.None);
+        foreach (var ch in allCheckpoints)
+        {
+            if (ch != null && ch.CheckpointID == checkpointID) return ch;
+        }
         return null;
     }
 
     private void SaveCurrentProgress()
     {
         PlayerController player = FindFirstObjectByType<PlayerController>();
-        if (player == null)
-        {
-            Debug.LogError("[DeathScreen] PlayerController не найден!"); return;
-        }
+        if (player == null) return;
 
         PlayerHealth health = player.GetComponent<PlayerHealth>();
-        if (health == null)
-        {
-            Debug.LogError("[DeathScreen] PlayerHealth не найден!"); return;
-        }
+        if (health == null) return;
 
         SaveData saveData = SaveSystem.Load();
-        if(saveData == null)
+        if (saveData == null)
         {
             saveData = new SaveData();
             saveData.hasStartedGame = true;
         }
 
         int healthToSave = health.CurrentHealthInUnits;
-        if (healthToSave <= 0) { healthToSave = saveData.currentHealth > 0 ? saveData.currentHealth : 4; Debug.Log($"[DeathScreen] HP=0, используем {healthToSave} из прошлого сохранения"); }
+        if (healthToSave <= 0) healthToSave = saveData.currentHealth > 0 ? saveData.currentHealth : 4;
 
-            saveData.currentHealth = healthToSave;
+        saveData.currentHealth = healthToSave;
         saveData.maxHealth = health.MaxHealthInUnits;
 
         saveData.torchCurrentTime = player.GetTorchTime();
         saveData.torchMaxTime = player.GetTorchMaxTime();
 
         Transform lastCheckpoint = GetLastCheckpoint();
-        if (lastCheckpoint != null) { saveData.playerPosition = lastCheckpoint.position; Debug.Log($"[DeathScreen] Позиция чекпоинта: {lastCheckpoint.position}"); }
+        if (lastCheckpoint != null) saveData.playerPosition = lastCheckpoint.position;
         else saveData.playerPosition = player.transform.position;
 
-        if (EconomyManager.Instance != null) { EconomyManager.Instance.SaveToSaveData(saveData); Debug.Log($"[DeathScreen] Экономика: Echo={saveData.currentEcho}, XP={saveData.currentXP}"); }
-
+        if (EconomyManager.Instance != null)
+        {
+            EconomyManager.Instance.SaveToSaveData(saveData);
+            Debug.Log($"[DeathScreen] Экономика: Echo={saveData.currentEcho}, XP={saveData.currentXP}");
+        }
 
         var mapManag = FindFirstObjectByType<MapManager>();
-        if(mapManag != null)
+        if (mapManag != null)
         {
-            saveData.activeCheckpoints = mapManag.GetActivatedCheckpoints().Select(ch => ch.CheckpointID).ToList();
-            saveData.discoveredZones = mapManag.GetDiscoveredZones().Select(zn => zn.zoneID).ToList();
+            saveData.activeCheckpoints = mapManag.GetActivatedCheckpointsIDs().ToList();
+            saveData.discoveredZones = mapManag.GetDiscoveredZones().Where(zn => zn != null).Select(zn => zn.zoneID).ToList();
 
-            Debug.Log($"[DeathScreen] Чекпоинты: {saveData.activeCheckpoints.Count}, Зоны: {saveData.discoveredZones.Count}");
+            foreach (var checkpointID in saveData.activeCheckpoints)
+            {
+                if (!saveData.checkpointPositions.ContainsKey(checkpointID))
+                {
+                    var checkpoint = FindCheckpointByID(checkpointID);
+                    if (checkpoint != null)
+                    {
+                        Vector3 pos = checkpoint.TeleportPoint != null ?
+                            checkpoint.TeleportPoint.position : checkpoint.transform.position;
+                        saveData.checkpointPositions[checkpointID] = pos;
+                    }
+                }
+            }
         }
+
         SaveSystem.Save(saveData);
     }
 
@@ -251,9 +275,11 @@ public class DeathScreen : MonoBehaviour
         Time.timeScale = 1f;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
-        SaveCurrentProgress();
-        LoadingScreen.Instance.LoadScene(MainMenu.MENU_SCENE_NAME);
+        if (GameManager.Instance != null) GameManager.Instance.SaveGame();
+        else SaveCurrentProgress();
 
+        if (LoadingScreen.Instance != null) LoadingScreen.Instance.LoadScene(MainMenu.MENU_SCENE_NAME);
+        else SceneManager.LoadScene(MainMenu.MENU_SCENE_NAME);
     }
 
     private void OnDestroy()

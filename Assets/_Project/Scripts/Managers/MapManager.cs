@@ -32,6 +32,9 @@ public class MapManager : MonoBehaviour
         if (player == null) player = GameObject.FindGameObjectWithTag("Player")?.transform;
 
         DontDestroyOnLoad(gameObject);
+
+        //upd
+        FindAllCheckpoints();
     }
 
     public void LoadFromSave()
@@ -95,7 +98,21 @@ public class MapManager : MonoBehaviour
         if (string.IsNullOrEmpty(checkpointID)) return;
         if (activatedCheckpointIDs.Contains(checkpointID)) return;
         activatedCheckpointIDs.Add(checkpointID);
+        OnMapDataChanged?.Invoke();
     }
+
+    public void ResetAllData()
+    {
+        discoveredZones.Clear();
+        activatedCheckpointIDs.Clear();
+        CurrentCheckpointID = null;
+        OnMapDataChanged?.Invoke();
+    }
+
+    //UPD
+    private void FindAllCheckpoints() => allCheckpoints = FindObjectsByType<Checkpoint>(FindObjectsSortMode.None);
+
+    public void RefreshCheckpointsList() => allCheckpoints = FindObjectsByType<Checkpoint>(FindObjectsSortMode.None);
 
     // save
     public void LoadFromSaveData(SaveData data)
@@ -106,12 +123,15 @@ public class MapManager : MonoBehaviour
         {
             discoveredZones = new HashSet<string>(data.discoveredZones);
         }
+        else discoveredZones.Clear();
 
         if (data.activeCheckpoints != null)
         {
             activatedCheckpointIDs = new List<string>(data.activeCheckpoints);
         }
+        else activatedCheckpointIDs.Clear();
 
+        CurrentCheckpointID = data.currentCheckpointID;
         OnMapDataChanged?.Invoke();
     }
 
@@ -121,6 +141,7 @@ public class MapManager : MonoBehaviour
 
         data.discoveredZones = new List<string>(discoveredZones);
         data.activeCheckpoints = new List<string>(activatedCheckpointIDs);
+        data.currentCheckpointID = CurrentCheckpointID;
     }
 
     // ONLY FOR DEBUG!

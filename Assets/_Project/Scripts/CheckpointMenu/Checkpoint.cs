@@ -148,7 +148,7 @@ public class Checkpoint : MonoBehaviour, IInteractable
         GameManager.Instance?.OnCheckpointReached(checkpointID);
 
         // upd
-        SaveCurrentProgress();
+        //SaveCurrentProgress();
 
         UpdateCheckpointUI();
     }

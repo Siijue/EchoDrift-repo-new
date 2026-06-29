@@ -72,6 +72,7 @@ public class MainMenu : MonoBehaviour
         newSave.playerPosition = startPosition;
 
         SaveSystem.Save(newSave);
+        if (MapManager.Instance != null) MapManager.Instance.ResetAllData();
         LoadingScreen.Instance.LoadScene(gameSceneName);
     }
 

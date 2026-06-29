@@ -27,6 +27,7 @@ public class SaveData
     public List<string> killedEnemy = new List<string>();
     public List<string> activatedObjects = new List<string>();
     public List<string> discoveredZones = new List<string>();
+    public string currentCheckpointID;
 
     public SaveData()
     {
