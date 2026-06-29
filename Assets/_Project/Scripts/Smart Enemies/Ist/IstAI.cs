@@ -144,7 +144,7 @@ public class IstAI : MonoBehaviour
         if (pixelPerfectCamera != null) pixelPerfectCamera.assetsPPU = 16;
 
         FindArenaCrystals();
-        TransitionTo(_alive); 
+        TransitionTo(_alive);
     }
 
     private void Update() => _current?.Update();

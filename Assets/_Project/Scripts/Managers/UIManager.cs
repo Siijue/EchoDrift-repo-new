@@ -397,19 +397,19 @@ public class UIManager : MonoBehaviour
 
         if (!IsReferenceValid(bossNameText) && IsReferenceValid(bossPanel))
         {
-            Transform t = bossPanel.transform.Find("BossHealthData/BossNameText");
+            Transform t = bossPanel.transform.Find("BossName");
             if (t != null) bossNameText = t.GetComponent<TextMeshProUGUI>();
         }
 
         if (!IsReferenceValid(bossSubnameText) && IsReferenceValid(bossPanel))
         {
-            Transform t = bossPanel.transform.Find("BossHealthData/BossSubnameText");
+            Transform t = bossPanel.transform.Find("BossSubname");
             if (t != null) bossSubnameText = t.GetComponent<TextMeshProUGUI>();
         }
 
         if (!IsReferenceValid(bossHealthBar) && IsReferenceValid(bossPanel))
         {
-            Transform t = bossPanel.transform.Find("BossHealthData/BossHealthBar");
+            Transform t = bossPanel.transform.Find("BossHealthBar");
             if (t != null) bossHealthBar = t.GetComponent<Image>();
         }
     }

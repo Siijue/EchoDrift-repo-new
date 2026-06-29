@@ -36,8 +36,6 @@ public class LoadingScreen : MonoBehaviour
         }
         Instance = this;
 
-        DontDestroyOnLoad(gameObject);
-
         if (canvasGroup == null) return;
 
         canvasGroup.alpha = 0;
